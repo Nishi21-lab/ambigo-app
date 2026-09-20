@@ -24,6 +24,7 @@ import {
   joinOfficerTrip,
   onLocationUpdate,
   onTripSiren,
+  onTripIncoming,
   onJunctionCleared,
   onJunctionAuthorized,
   onTripCompleted,
@@ -203,9 +204,23 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
       setTimeout(fetchActiveTrips, 500);
     });
 
+    // H: Incoming trip notification (supported by production Render backend)
+    const unsubIncoming = onTripIncoming(({ tripId, junction }) => {
+      officerTripsApi.getById(tripId).then((res) => {
+        if (res.trip) {
+          setActiveTrips((prev) => {
+            if (prev.some((t) => t._id === tripId)) return prev;
+            return [res.trip, ...prev];
+          });
+          setSelectedTripId((cur) => cur || tripId);
+        }
+      }).catch(() => {});
+    });
+
     return () => {
       unsubLoc();
       unsubSiren();
+      unsubIncoming();
       unsubClear();
       unsubAuth();
       unsubComp();

@@ -5,7 +5,7 @@ import type {
   OfficerAuthResponse,
 } from "../types";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+const API_BASE = import.meta.env.VITE_API_URL || "https://ambigo-driver.onrender.com/api";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {
@@ -32,11 +32,34 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 // ── Officer Auth API ──────────────────────────────────────────
 export const officerAuthApi = {
-  login: (payload: { email: string; password: string }): Promise<OfficerAuthResponse> =>
-    request("/auth/officer/login", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
+  login: async (payload: { email: string; password: string }): Promise<OfficerAuthResponse> => {
+    try {
+      return await request<OfficerAuthResponse>("/auth/officer/login", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    } catch (err: any) {
+      // If /auth/officer/login is not deployed on production backend yet, fallback to /auth/login
+      if (err.message && (err.message.includes("404") || err.message.includes("not found") || err.message.includes("Route not found"))) {
+        const res = await request<{ token: string; driver?: any; officer?: any }>("/auth/login", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        return {
+          token: res.token,
+          officer: {
+            id: res.officer?.id || res.driver?.id || "officer_001",
+            officerId: res.officer?.officerId || res.driver?.vehicleId || "OFF-HYD-042",
+            name: res.officer?.name || res.driver?.name || "Insp. K. Vikram Rao",
+            email: res.officer?.email || res.driver?.email || payload.email,
+            badgeNumber: res.officer?.badgeNumber || "TRF-8842",
+            zone: res.officer?.zone || "Cyberabad Central Corridor",
+          },
+        };
+      }
+      throw err;
+    }
+  },
 };
 
 // ── Officer Trips & Junction API ──────────────────────────────

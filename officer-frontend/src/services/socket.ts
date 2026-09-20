@@ -8,7 +8,7 @@ import type {
   RequestTakenPayload,
 } from "../types";
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:3001";
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "https://ambigo-driver.onrender.com";
 
 let socket: Socket | null = null;
 
@@ -122,5 +122,15 @@ export function onRequestTaken(cb: (payload: RequestTakenPayload) => void) {
   s.on("request:taken", cb);
   return () => {
     s.off("request:taken", cb);
+  };
+}
+
+export function onTripIncoming(
+  cb: (payload: { tripId: string; junction: Junction }) => void
+) {
+  const s = getOfficerSocket();
+  s.on("trip:incoming", cb);
+  return () => {
+    s.off("trip:incoming", cb);
   };
 }
