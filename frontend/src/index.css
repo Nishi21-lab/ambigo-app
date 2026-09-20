@@ -1,0 +1,152 @@
+/* Leaflet CSS — must be first before @tailwind directives */
+@import "leaflet/dist/leaflet.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base ──────────────────────────────────────────────────── */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: "Inter", system-ui, sans-serif;
+    background-color: #06050f;
+    color: #e8e6f4;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #17142e;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #4a3f7f;
+    border-radius: 3px;
+  }
+
+  /* Hide number input arrows */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}
+
+/* ── Components ────────────────────────────────────────────── */
+@layer components {
+  .glass-card {
+    @apply bg-ambigo-900/80 backdrop-blur-md border border-ambigo-700/50 rounded-2xl;
+  }
+
+  .glass-input {
+    @apply bg-ambigo-800/60 border border-ambigo-600/50 rounded-xl px-4 py-3 
+           text-white placeholder-ambigo-400 focus:outline-none focus:ring-2 
+           focus:ring-ambigo-400/60 focus:border-ambigo-400/60 transition-all duration-200;
+  }
+
+  .btn-primary {
+    @apply bg-gradient-to-r from-ambigo-500 to-ambigo-400 hover:from-ambigo-400 hover:to-ambigo-300
+           text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 
+           active:scale-[0.98] shadow-lg shadow-ambigo-500/25 disabled:opacity-50 
+           disabled:cursor-not-allowed disabled:active:scale-100;
+  }
+
+  .btn-secondary {
+    @apply bg-ambigo-800/60 hover:bg-ambigo-700/60 border border-ambigo-600/50 
+           hover:border-ambigo-500/60 text-ambigo-200 font-medium py-3 px-6 rounded-xl 
+           transition-all duration-200 active:scale-[0.98] disabled:opacity-50 
+           disabled:cursor-not-allowed;
+  }
+
+  .btn-danger {
+    @apply bg-alert-red/10 hover:bg-alert-red/20 border border-alert-red/30 
+           hover:border-alert-red/50 text-alert-red font-medium py-3 px-6 rounded-xl 
+           transition-all duration-200;
+  }
+
+  .status-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold;
+  }
+
+  .leaflet-container {
+    @apply rounded-xl;
+    background: #0d0b1e !important;
+  }
+}
+
+/* ── Utilities ─────────────────────────────────────────────── */
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-ambigo-300 to-alert-blue bg-clip-text text-transparent;
+  }
+
+  .glow-purple {
+    box-shadow: 0 0 20px rgba(74, 63, 127, 0.4);
+  }
+
+  .glow-green {
+    box-shadow: 0 0 20px rgba(46, 213, 115, 0.3);
+  }
+
+  .glow-red {
+    box-shadow: 0 0 20px rgba(255, 71, 87, 0.3);
+  }
+}
+
+/* ── Ambulance pulse animation on map ──────────────────────── */
+@keyframes ambulance-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.6);
+  }
+  50% {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 10px rgba(255, 71, 87, 0);
+  }
+}
+
+.ambulance-marker-icon {
+  animation: ambulance-pulse 1.5s ease-in-out infinite;
+}
+
+/* ── Leaflet dark tile override ───────────────────────────── */
+.leaflet-tile-pane {
+  filter: brightness(0.6) saturate(0.5) hue-rotate(190deg);
+}
+
+.leaflet-control-attribution {
+  background: rgba(13, 11, 30, 0.7) !important;
+  color: #6b5ea8 !important;
+}
+
+.leaflet-control-attribution a {
+  color: #9b8dd4 !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: #17142e !important;
+  border: 1px solid #312b58 !important;
+  color: #e8e6f4 !important;
+  border-radius: 12px !important;
+}
+
+.leaflet-popup-tip {
+  background: #17142e !important;
+}

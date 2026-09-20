@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.env
+*.log
+.DS_Store
+Thumbs.db
+.vite/
+frontend/dist/
+officer-frontend/dist/
+backend/dist/

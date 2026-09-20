@@ -1,0 +1,135 @@
+/* Leaflet CSS — must be first */
+@import "leaflet/dist/leaflet.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: "Inter", system-ui, sans-serif;
+    background-color: #06050f;
+    color: #e8e6f4;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #0d0b1e;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #312b58;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #4a3f7f;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-ambigo-900/80 backdrop-blur-md border border-ambigo-800/80 rounded-2xl;
+  }
+
+  .glass-card {
+    @apply bg-ambigo-900/90 backdrop-blur-lg border border-ambigo-700/60 rounded-xl shadow-xl;
+  }
+
+  .command-card {
+    @apply bg-[#0d0b1e]/95 border border-[#231f42] rounded-xl shadow-2xl;
+  }
+
+  .btn-command-primary {
+    @apply bg-gradient-to-r from-ambigo-600 to-ambigo-500 hover:from-ambigo-500 hover:to-ambigo-400
+           text-white font-semibold py-2.5 px-4 rounded-xl transition-all duration-200
+           active:scale-[0.98] shadow-lg shadow-ambigo-600/30 disabled:opacity-40
+           disabled:cursor-not-allowed disabled:active:scale-100;
+  }
+
+  .btn-command-authorize {
+    @apply bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400
+           text-white font-bold py-2.5 px-5 rounded-xl transition-all duration-200
+           active:scale-[0.98] shadow-lg shadow-emerald-600/30 disabled:opacity-40
+           disabled:cursor-not-allowed;
+  }
+
+  .btn-command-clear {
+    @apply bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400
+           text-white font-bold py-2.5 px-5 rounded-xl transition-all duration-200
+           active:scale-[0.98] shadow-lg shadow-blue-600/30 disabled:opacity-40
+           disabled:cursor-not-allowed;
+  }
+
+  .btn-command-hold {
+    @apply bg-alert-amber/20 hover:bg-alert-amber/30 border border-alert-amber/50
+           text-alert-amber font-semibold py-2.5 px-4 rounded-xl transition-all duration-200
+           active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .leaflet-container {
+    @apply rounded-xl;
+    background: #090814 !important;
+  }
+}
+
+/* ── Ambulance pulse animation on map ──────────────────────── */
+@keyframes ambulance-beacon {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  50% {
+    transform: scale(1.12);
+    box-shadow: 0 0 0 14px rgba(239, 68, 68, 0);
+  }
+}
+
+.ambulance-officer-marker {
+  animation: ambulance-beacon 1.2s ease-in-out infinite;
+}
+
+/* ── Leaflet dark tile filter ─────────────────────────────── */
+.leaflet-tile-pane {
+  filter: brightness(0.62) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+}
+
+.leaflet-control-attribution {
+  background: rgba(6, 5, 15, 0.8) !important;
+  color: #6b5ea8 !important;
+  font-size: 10px !important;
+}
+
+.leaflet-control-attribution a {
+  color: #9b8dd4 !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: #0d0b1e !important;
+  border: 1px solid #312b58 !important;
+  color: #e8e6f4 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.6) !important;
+}
+
+.leaflet-popup-tip {
+  background: #0d0b1e !important;
+}
