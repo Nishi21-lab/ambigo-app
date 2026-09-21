@@ -1,3 +1,8 @@
+/**
+ * AmbiGo Traffic Officer Command Center Application
+ * Connected to Production Backend: https://ambigo-driver.onrender.com
+ * Integrated Real-time Traffic Clearance & Corridor Management
+ */
 import React, { useState, useEffect } from "react";
 import { OfficerAuthPage } from "./pages/OfficerAuthPage";
 import { OfficerDashboardPage } from "./pages/OfficerDashboardPage";
