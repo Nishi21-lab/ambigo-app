@@ -64,11 +64,45 @@ export const officerAuthApi = {
 
 // ── Officer Trips & Junction API ──────────────────────────────
 export const officerTripsApi = {
-  getAll: (status?: string): Promise<{ trips: Trip[] }> =>
-    request(status ? `/trips?status=${encodeURIComponent(status)}` : "/trips"),
+  getAll: async (status?: string): Promise<{ trips: Trip[] }> => {
+    try {
+      return await request(status ? `/trips?status=${encodeURIComponent(status)}` : "/trips");
+    } catch {
+      // Production Render backend fallback: hydrate trips from /requests
+      try {
+        const reqRes = await request<{ requests: any[] }>("/requests");
+        const tripIds = [
+          ...new Set(
+            (reqRes.requests || [])
+              .filter((r) => r.incidentLocation?.address?.startsWith("EMERGENCY_DISPATCH:"))
+              .map((r) => r.incidentLocation.address.replace("EMERGENCY_DISPATCH:", "").trim())
+          ),
+        ];
+        const fetchedTrips: Trip[] = [];
+        for (const tid of tripIds) {
+          try {
+            const tRes = await request<{ trip: Trip }>(`/trips/${tid}`);
+            if (tRes.trip) {
+              if (!status || tRes.trip.status === status) {
+                fetchedTrips.push(tRes.trip);
+              }
+            }
+          } catch {}
+        }
+        return { trips: fetchedTrips };
+      } catch {
+        return { trips: [] };
+      }
+    }
+  },
 
-  getActive: (): Promise<{ trips: Trip[] }> =>
-    request("/trips/active"),
+  getActive: async (): Promise<{ trips: Trip[] }> => {
+    try {
+      return await request("/trips/active");
+    } catch {
+      return officerTripsApi.getAll("en_route");
+    }
+  },
 
   getById: (id: string): Promise<{ trip: Trip }> =>
     request(`/trips/${id}`),

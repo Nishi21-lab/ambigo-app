@@ -30,8 +30,11 @@ import {
   onTripCompleted,
   onEmergencyNew,
   onRequestTaken,
+  onRequestNew,
+  onSocketStateChange,
   emitAuthorizeJunction,
   emitClearJunction,
+  emitLocationUpdate,
 } from "../services/socket";
 import {
   formatDistance,
@@ -52,6 +55,8 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<"command" | "history">("command");
   const [isAlarmMuted, setIsAlarmMuted] = useState(false);
+  const [isSocketConnected, setIsSocketConnected] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string>(() => new Date().toLocaleTimeString());
 
   const [activeTrips, setActiveTrips] = useState<Trip[]>([]);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
@@ -108,13 +113,18 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
       joinOfficerTrip(selectedTripId);
     }
 
-    // A: Real-time location update from driver
+    // 0: Live connection state tracking
+    const unsubState = onSocketStateChange((connected) => {
+      setIsSocketConnected(connected);
+      setLastSyncTime(new Date().toLocaleTimeString());
+    });
+
+    // A: Real-time location update from driver (exact telemetry)
     const unsubLoc = onLocationUpdate(({ tripId, location }) => {
-      // Update ambulance position
+      setLastSyncTime(new Date().toLocaleTimeString());
       if (!selectedTripId || selectedTripId === tripId) {
         setAmbulanceLocation(location);
       }
-      // Update trip's last known location
       setActiveTrips((prev) =>
         prev.map((t) => (t._id === tripId ? { ...t, lastKnownLocation: location } : t))
       );
@@ -122,6 +132,7 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
 
     // B: Real-time siren / approaching alert
     const unsubSiren = onTripSiren(({ tripId, junction }) => {
+      setLastSyncTime(new Date().toLocaleTimeString());
       if (!isAlarmMutedRef.current) {
         playEmergencyAlertSound();
       }
@@ -140,6 +151,7 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
 
     // C: Real-time junction clearance
     const unsubClear = onJunctionCleared(({ tripId, junction, nextJunction }) => {
+      setLastSyncTime(new Date().toLocaleTimeString());
       setActiveTrips((prev) =>
         prev.map((t) => {
           if (t._id !== tripId) return t;
@@ -157,6 +169,7 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
 
     // D: Real-time junction authorization
     const unsubAuth = onJunctionAuthorized(({ tripId, junctionId, junction }) => {
+      setLastSyncTime(new Date().toLocaleTimeString());
       setActiveTrips((prev) =>
         prev.map((t) => {
           if (t._id !== tripId) return t;
@@ -172,6 +185,7 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
 
     // E: Real-time trip completed
     const unsubComp = onTripCompleted(({ tripId }) => {
+      setLastSyncTime(new Date().toLocaleTimeString());
       setActiveTrips((prev) => prev.filter((t) => t._id !== tripId));
       if (selectedTripId === tripId) {
         setSelectedTripId(null);
@@ -181,6 +195,7 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
 
     // F: Real-time NEW emergency incoming
     const unsubNew = onEmergencyNew(({ trip }) => {
+      setLastSyncTime(new Date().toLocaleTimeString());
       if (!isAlarmMutedRef.current) {
         playEmergencyAlertSound();
       }
@@ -200,12 +215,13 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
 
     // G: Dispatch request taken by driver
     const unsubTaken = onRequestTaken(() => {
-      // Refresh active trips list to catch newly created trip
+      setLastSyncTime(new Date().toLocaleTimeString());
       setTimeout(fetchActiveTrips, 500);
     });
 
-    // H: Incoming trip notification (supported by production Render backend)
+    // H: Incoming trip notification
     const unsubIncoming = onTripIncoming(({ tripId, junction }) => {
+      setLastSyncTime(new Date().toLocaleTimeString());
       officerTripsApi.getById(tripId).then((res) => {
         if (res.trip) {
           setActiveTrips((prev) => {
@@ -217,7 +233,37 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
       }).catch(() => {});
     });
 
+    // I: Global emergency dispatch alert broadcast
+    const unsubReqNew = onRequestNew(async ({ request }) => {
+      setLastSyncTime(new Date().toLocaleTimeString());
+      if (request?.incidentLocation?.address?.startsWith("EMERGENCY_DISPATCH:")) {
+        const tripId = request.incidentLocation.address.replace("EMERGENCY_DISPATCH:", "").trim();
+        try {
+          const res = await officerTripsApi.getById(tripId);
+          if (res.trip) {
+            if (!isAlarmMutedRef.current) {
+              playEmergencyAlertSound();
+            }
+            setActiveTrips((prev) => {
+              if (prev.some((t) => t._id === tripId)) return prev;
+              return [res.trip, ...prev];
+            });
+            setSelectedTripId((cur) => cur || tripId);
+            if (res.trip.lastKnownLocation) {
+              setAmbulanceLocation(res.trip.lastKnownLocation);
+            } else if (res.trip.junctions.length > 0) {
+              setAmbulanceLocation(res.trip.junctions[0].location);
+            }
+            joinOfficerTrip(tripId);
+          }
+        } catch (e) {
+          console.warn("Failed to fetch dispatched trip:", e);
+        }
+      }
+    });
+
     return () => {
+      unsubState();
       unsubLoc();
       unsubSiren();
       unsubIncoming();
@@ -226,6 +272,7 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
       unsubComp();
       unsubNew();
       unsubTaken();
+      unsubReqNew();
       disconnectOfficerSocket();
     };
   }, [selectedTripId, fetchActiveTrips]);
@@ -234,6 +281,8 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
   const handleAuthorize = async (junctionId: string) => {
     if (!activeTrip) return;
     setActionLoadingId(junctionId);
+
+    const targetJunc = activeTrip.junctions.find((j) => j.id === junctionId);
 
     // Optimistic local update
     setActiveTrips((prev) =>
@@ -248,8 +297,8 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
       })
     );
 
-    // Socket emission
-    emitAuthorizeJunction(activeTrip._id, junctionId, officer.officerId);
+    // Socket emission with target junction coordinates for broadcast
+    emitAuthorizeJunction(activeTrip._id, junctionId, officer.officerId, targetJunc?.location);
 
     // Backend REST API call
     try {
@@ -264,6 +313,8 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
   const handleClear = async (junctionId: string) => {
     if (!activeTrip) return;
     setActionLoadingId(junctionId);
+
+    const targetJunc = activeTrip.junctions.find((j) => j.id === junctionId);
 
     // Optimistic local update
     setActiveTrips((prev) =>
@@ -282,8 +333,8 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
       })
     );
 
-    // Socket emission
-    emitClearJunction(activeTrip._id, junctionId, officer.officerId);
+    // Socket emission: pass junction location so production backend distance check triggers junction:cleared
+    emitClearJunction(activeTrip._id, junctionId, officer.officerId, targetJunc?.location);
 
     // Backend REST API call
     try {
@@ -339,6 +390,8 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
         activeTripCount={activeTrips.length}
         activeTab={activeTab}
         isAlarmMuted={isAlarmMuted}
+        isSocketConnected={isSocketConnected}
+        lastSyncTime={lastSyncTime}
         onToggleMute={() => setIsAlarmMuted(!isAlarmMuted)}
         onTabChange={setActiveTab}
         onLogout={onLogout}

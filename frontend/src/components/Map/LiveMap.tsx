@@ -43,6 +43,7 @@ const junctionColor: Record<string, string> = {
   pending: "#4a3f7f",
   incoming: "#1e90ff",
   sirened: "#ffa502",
+  authorized: "#00d2d3",
   cleared: "#2ed573",
 };
 

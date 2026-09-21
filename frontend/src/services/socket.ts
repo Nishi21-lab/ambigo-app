@@ -8,14 +8,14 @@ import type {
   RequestTakenPayload,
 } from "../types";
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:3002";
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "https://ambigo-driver.onrender.com";
 
 let socket: Socket | null = null;
 
 export function getSocket(): Socket {
   if (!socket) {
     socket = io(SOCKET_URL, {
-      transports: ["websocket"],
+      transports: ["websocket", "polling"],
       autoConnect: false,
     });
   }
@@ -86,4 +86,11 @@ export function onRequestNew(cb: (payload: RequestNewPayload) => void) {
 export function onRequestTaken(cb: (payload: RequestTakenPayload) => void) {
   getSocket().on("request:taken", cb);
   return () => getSocket().off("request:taken", cb);
+}
+
+export function onJunctionAuthorized(
+  cb: (payload: { tripId: string; junctionId: string; junction: Junction }) => void
+) {
+  getSocket().on("junction:authorized", cb);
+  return () => getSocket().off("junction:authorized", cb);
 }

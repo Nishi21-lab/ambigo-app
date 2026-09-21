@@ -22,6 +22,13 @@ const alertConfig = {
     label: "Traffic alerted",
     prefix: "🚨 Traffic alerted at",
   },
+  authorized: {
+    icon: CheckCircle,
+    color: "text-emerald-400",
+    bg: "bg-emerald-500/10 border-emerald-400/30",
+    label: "Passage Authorized",
+    prefix: "🟢 Officer authorized corridor at",
+  },
   cleared: {
     icon: CheckCircle,
     color: "text-alert-green",

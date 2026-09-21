@@ -44,12 +44,39 @@ export function joinOfficerTrip(tripId: string) {
   s.emit("officer:join_trip", { tripId });
 }
 
-export function emitAuthorizeJunction(tripId: string, junctionId: string, officerId: string = "OFF-HYD-042") {
+export function emitAuthorizeJunction(
+  tripId: string,
+  junctionId: string,
+  officerId: string = "OFF-HYD-042",
+  junctionLocation?: Coordinates
+) {
   getOfficerSocket().emit("officer:authorize_junction", { tripId, junctionId, officerId });
+  getOfficerSocket().emit("driver:location_update", {
+    tripId,
+    location: {
+      lat: junctionLocation?.lat || 23.0526,
+      lng: junctionLocation?.lng || 72.5888,
+      authorizedJunctionId: junctionId,
+      officerId,
+      passageAuthorized: true,
+    },
+  });
 }
 
-export function emitClearJunction(tripId: string, junctionId: string, officerId: string = "OFF-HYD-042") {
+export function emitClearJunction(
+  tripId: string,
+  junctionId: string,
+  officerId: string = "OFF-HYD-042",
+  junctionLocation?: Coordinates
+) {
   getOfficerSocket().emit("officer:clear_junction", { tripId, junctionId, officerId });
+  if (junctionLocation) {
+    getOfficerSocket().emit("driver:location_update", { tripId, location: junctionLocation });
+  }
+}
+
+export function emitLocationUpdate(tripId: string, location: Coordinates) {
+  getOfficerSocket().emit("driver:location_update", { tripId, location });
 }
 
 // ── Listeners ─────────────────────────────────────────────────
@@ -132,5 +159,27 @@ export function onTripIncoming(
   s.on("trip:incoming", cb);
   return () => {
     s.off("trip:incoming", cb);
+  };
+}
+
+export function onRequestNew(cb: (payload: { request: any }) => void) {
+  const s = getOfficerSocket();
+  s.on("request:new", cb);
+  return () => {
+    s.off("request:new", cb);
+  };
+}
+
+export function onSocketStateChange(cb: (connected: boolean) => void) {
+  const s = getOfficerSocket();
+  const onConnect = () => cb(true);
+  const onDisconnect = () => cb(false);
+  s.on("connect", onConnect);
+  s.on("disconnect", onDisconnect);
+  // initial state
+  cb(s.connected);
+  return () => {
+    s.off("connect", onConnect);
+    s.off("disconnect", onDisconnect);
   };
 }

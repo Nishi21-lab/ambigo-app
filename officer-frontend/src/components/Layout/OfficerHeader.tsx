@@ -8,6 +8,8 @@ interface OfficerHeaderProps {
   activeTripCount: number;
   activeTab: "command" | "history";
   isAlarmMuted: boolean;
+  isSocketConnected: boolean;
+  lastSyncTime: string;
   onToggleMute: () => void;
   onTabChange: (tab: "command" | "history") => void;
   onLogout: () => void;
@@ -18,6 +20,8 @@ export const OfficerHeader: React.FC<OfficerHeaderProps> = ({
   activeTripCount,
   activeTab,
   isAlarmMuted,
+  isSocketConnected,
+  lastSyncTime,
   onToggleMute,
   onTabChange,
   onLogout,
@@ -73,17 +77,34 @@ export const OfficerHeader: React.FC<OfficerHeaderProps> = ({
         </button>
       </nav>
 
-      {/* Right: Duty Status + Mute + Logout */}
+      {/* Right: Connection Status + Duty Status + Mute + Logout */}
       <div className="flex items-center gap-3">
-        {/* On Duty Badge */}
-        <div className="flex items-center gap-2 bg-emerald-950/40 border border-emerald-800/50 px-3 py-1 rounded-full shadow-[0_0_12px_rgba(16,185,129,0.15)]">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-          </span>
-          <span className="text-[11px] font-bold tracking-wider text-emerald-300 uppercase">
-            ON DUTY
-          </span>
+        {/* Real Socket.IO Connection Indicator */}
+        <div className="flex flex-col items-end">
+          <div
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide border ${
+              isSocketConnected
+                ? "bg-emerald-950/60 border-emerald-500/50 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.2)]"
+                : "bg-red-950/60 border-red-500/50 text-alert-red shadow-[0_0_10px_rgba(239,68,68,0.2)]"
+            }`}
+          >
+            <span className="relative flex h-2 w-2">
+              {isSocketConnected && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              )}
+              <span
+                className={`relative inline-flex rounded-full h-2 w-2 ${
+                  isSocketConnected ? "bg-emerald-500" : "bg-alert-red"
+                }`}
+              />
+            </span>
+            <span>{isSocketConnected ? "CONNECTED — LIVE" : "DISCONNECTED"}</span>
+          </div>
+          {lastSyncTime && (
+            <span className="text-[10px] text-ambigo-500 font-mono mt-0.5">
+              Last synchronized: {lastSyncTime}
+            </span>
+          )}
         </div>
 
         {/* Audio Siren Mute Toggle */}

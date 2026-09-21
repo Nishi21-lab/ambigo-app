@@ -6,10 +6,12 @@ import {
   disconnectSocket,
   joinTrip,
   sendLocationUpdate,
+  onLocationUpdate,
   onTripIncoming,
   onTripSiren,
   onJunctionCleared,
   onTripCompleted,
+  onJunctionAuthorized,
 } from "../services/socket";
 
 const ACTIVE_TRIP_KEY = "ambigo_active_trip_id";
@@ -23,7 +25,7 @@ export type TripPhase =
 
 export interface TripAlert {
   id: string;
-  type: "incoming" | "sirened" | "cleared" | "completed";
+  type: "incoming" | "sirened" | "authorized" | "cleared" | "completed";
   junctionName?: string;
   timestamp: number;
 }
@@ -135,6 +137,39 @@ export function useTripState(): UseTripStateReturn {
       );
     });
 
+    const cleanupAuth = onJunctionAuthorized(({ junction }) => {
+      addAlert({ type: "authorized", junctionName: junction.name });
+      setTrip((t: Trip | null) =>
+        t
+          ? {
+              ...t,
+              junctions: t.junctions.map((j: Junction) =>
+                j.id === junction.id ? { ...j, status: "authorized" as const } : j
+              ),
+            }
+          : t
+      );
+    });
+
+    const cleanupLoc = onLocationUpdate(({ location }) => {
+      if ((location as any)?.passageAuthorized && (location as any)?.authorizedJunctionId) {
+        const jId = (location as any).authorizedJunctionId;
+        setTrip((t: Trip | null) => {
+          if (!t) return t;
+          const junction = t.junctions.find((j: Junction) => j.id === jId);
+          if (junction && junction.status !== "authorized") {
+            addAlert({ type: "authorized", junctionName: junction.name });
+          }
+          return {
+            ...t,
+            junctions: t.junctions.map((j: Junction) =>
+              j.id === jId ? { ...j, status: "authorized" as const, officerId: (location as any).officerId } : j
+            ),
+          };
+        });
+      }
+    });
+
     const cleanupCompleted = onTripCompleted(() => {
       addAlert({ type: "completed" });
       setPhase("completed");
@@ -146,6 +181,8 @@ export function useTripState(): UseTripStateReturn {
     return () => {
       cleanupIncoming();
       cleanupSiren();
+      cleanupAuth();
+      cleanupLoc();
       cleanupCleared();
       cleanupCompleted();
     };
@@ -172,6 +209,27 @@ export function useTripState(): UseTripStateReturn {
         connectSocket();
         setupSocketListeners(created._id);
         joinTrip(created._id);
+
+        // Real-time notification to traffic officers via production backend request broadcast
+        try {
+          await fetch(`${import.meta.env.VITE_API_URL || "https://ambigo-driver.onrender.com/api"}/requests`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              patientName: `Emergency Transit (${created.vehicleId})`,
+              patientPhone: "+91 98765 43210",
+              incidentLocation: {
+                lat: created.junctions[0]?.location.lat || 23.0225,
+                lng: created.junctions[0]?.location.lng || 72.5714,
+                address: `EMERGENCY_DISPATCH:${created._id}`,
+              },
+              hospital: created.hospital,
+              severity: "critical",
+            }),
+          });
+        } catch {
+          // Non-blocking fallback
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to start trip.");
         setPhase("error");
@@ -192,6 +250,23 @@ export function useTripState(): UseTripStateReturn {
     connectSocket();
     setupSocketListeners(newTrip._id);
     joinTrip(newTrip._id);
+
+    // Real-time notification to traffic officers via production backend request broadcast
+    fetch(`${import.meta.env.VITE_API_URL || "https://ambigo-driver.onrender.com/api"}/requests`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        patientName: `Emergency Transit (${newTrip.vehicleId})`,
+        patientPhone: "+91 98765 43210",
+        incidentLocation: {
+          lat: newTrip.junctions[0]?.location.lat || 23.0225,
+          lng: newTrip.junctions[0]?.location.lng || 72.5714,
+          address: `EMERGENCY_DISPATCH:${newTrip._id}`,
+        },
+        hospital: newTrip.hospital,
+        severity: "critical",
+      }),
+    }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

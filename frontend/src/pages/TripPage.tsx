@@ -267,6 +267,7 @@ export const TripPage: React.FC<TripPageProps> = ({ session, onSignOut }) => {
                     pending: "bg-ambigo-700",
                     incoming: "bg-alert-blue",
                     sirened: "bg-alert-amber",
+                    authorized: "bg-emerald-400 animate-pulse",
                     cleared: "bg-alert-green",
                   };
                   return (

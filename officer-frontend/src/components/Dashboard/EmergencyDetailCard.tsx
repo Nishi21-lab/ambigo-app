@@ -70,13 +70,19 @@ export const EmergencyDetailCard: React.FC<EmergencyDetailCardProps> = ({
             <User className="w-3 h-3 text-blue-400" /> Driver
           </span>
           <p className="font-semibold text-white mt-1 text-sm">{trip.driverName}</p>
+          <p className="text-[10px] text-ambigo-400 font-mono mt-0.5">+91 98765 43210</p>
         </div>
 
         <div className="bg-[#090814] p-3 rounded-xl border border-ambigo-800/60">
           <span className="text-[10px] uppercase font-bold text-ambigo-400 flex items-center gap-1">
-            <Gauge className="w-3 h-3 text-amber-400" /> Speed Est.
+            <Gauge className="w-3 h-3 text-amber-400" /> Live Coordinates
           </span>
-          <p className="font-semibold text-white mt-1 text-sm font-mono">48 km/h</p>
+          <p className="font-semibold text-white mt-1 text-xs font-mono">
+            {ambulanceLocation
+              ? `${ambulanceLocation.lat.toFixed(4)}, ${ambulanceLocation.lng.toFixed(4)}`
+              : "Standby"}
+          </p>
+          <p className="text-[10px] text-emerald-400 font-medium mt-0.5">● Telemetry Stream</p>
         </div>
 
         <div className="bg-[#090814] p-3 rounded-xl border border-ambigo-800/60">
