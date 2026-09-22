@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Trip, Coordinates, Junction } from "../types";
-import { tripsApi } from "../services/api";
+import { tripsApi, requestsApi } from "../services/api";
 import {
   connectSocket,
   disconnectSocket,
@@ -220,20 +220,15 @@ export function useTripState(): UseTripStateReturn {
 
         // Real-time notification to traffic officers via production backend request broadcast
         try {
-          await fetch(`${import.meta.env.VITE_API_URL || "https://ambigo-driver.onrender.com/api"}/requests`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              patientName: `Emergency Transit (${created.vehicleId})`,
-              patientPhone: "+91 98765 43210",
-              incidentLocation: {
-                lat: initialLoc.lat,
-                lng: initialLoc.lng,
-                address: `EMERGENCY_DISPATCH:${created._id}`,
-              },
-              hospital: created.hospital,
-              severity: "critical",
-            }),
+          await requestsApi.create({
+            patientName: `Emergency Transit (${created.vehicleId})`,
+            patientPhone: "+91 98765 43210",
+            incidentLocation: {
+              lat: initialLoc.lat,
+              lng: initialLoc.lng,
+              address: `EMERGENCY_DISPATCH:${created._id}`,
+            },
+            hospital: created.hospital,
           });
         } catch {
           // Non-blocking fallback
@@ -264,20 +259,15 @@ export function useTripState(): UseTripStateReturn {
     sendLocationUpdate(newTrip._id, initialLoc);
 
     // Real-time notification to traffic officers via production backend request broadcast
-    fetch(`${import.meta.env.VITE_API_URL || "https://ambigo-driver.onrender.com/api"}/requests`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        patientName: `Emergency Transit (${newTrip.vehicleId})`,
-        patientPhone: "+91 98765 43210",
-        incidentLocation: {
-          lat: initialLoc.lat,
-          lng: initialLoc.lng,
-          address: `EMERGENCY_DISPATCH:${newTrip._id}`,
-        },
-        hospital: newTrip.hospital,
-        severity: "critical",
-      }),
+    requestsApi.create({
+      patientName: `Emergency Transit (${newTrip.vehicleId})`,
+      patientPhone: "+91 98765 43210",
+      incidentLocation: {
+        lat: initialLoc.lat,
+        lng: initialLoc.lng,
+        address: `EMERGENCY_DISPATCH:${newTrip._id}`,
+      },
+      hospital: newTrip.hospital,
     }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

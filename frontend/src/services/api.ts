@@ -89,6 +89,12 @@ export const requestsApi = {
   getPending: (): Promise<{ requests: AmbulanceRequest[] }> =>
     request(`/requests?status=pending`),
 
+  create: (payload: any): Promise<{ request: AmbulanceRequest }> =>
+    request("/requests", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
   accept: (id: string, payload: AcceptRequestPayload): Promise<{ trip: Trip }> =>
     request(`/requests/${id}/accept`, {
       method: "POST",
