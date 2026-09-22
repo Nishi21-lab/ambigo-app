@@ -219,8 +219,8 @@ export function useTripState(): UseTripStateReturn {
               patientName: `Emergency Transit (${created.vehicleId})`,
               patientPhone: "+91 98765 43210",
               incidentLocation: {
-                lat: created.junctions[0]?.location.lat || 23.0225,
-                lng: created.junctions[0]?.location.lng || 72.5714,
+                lat: created.junctions[0]?.location.lat || 17.4504,
+                lng: created.junctions[0]?.location.lng || 78.3808,
                 address: `EMERGENCY_DISPATCH:${created._id}`,
               },
               hospital: created.hospital,
@@ -259,8 +259,8 @@ export function useTripState(): UseTripStateReturn {
         patientName: `Emergency Transit (${newTrip.vehicleId})`,
         patientPhone: "+91 98765 43210",
         incidentLocation: {
-          lat: newTrip.junctions[0]?.location.lat || 23.0225,
-          lng: newTrip.junctions[0]?.location.lng || 72.5714,
+          lat: newTrip.junctions[0]?.location.lat || 17.4504,
+          lng: newTrip.junctions[0]?.location.lng || 78.3808,
           address: `EMERGENCY_DISPATCH:${newTrip._id}`,
         },
         hospital: newTrip.hospital,

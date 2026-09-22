@@ -13,23 +13,24 @@ interface RequestFormProps {
 }
 
 const HOSPITALS = [
-  "Civil Hospital, Asarwa",
-  "Apollo Hospital, Gandhinagar",
-  "Zydus Hospital, SG Highway",
-  "CIMS Hospital, Science City Road",
-  "SVP Hospital, Ellisbridge",
+  "Apollo Hospitals, Jubilee Hills",
+  "AIG Hospitals, Gachibowli",
+  "CARE Hospitals, Banjara Hills",
+  "KIMS Hospital, Secunderabad",
+  "Yashoda Hospitals, Somajiguda",
+  "Continental Hospitals, Nanakramguda",
 ];
 
 const PICKUP_LOCATIONS = [
   "Current GPS Location",
-  "SGVP Circle, SG Highway",
-  "Navrangpura Cross Road",
-  "Shivranjani Crossroads",
-  "Iscon Crossroads",
-  "Kankaria Lake",
-  "Gujarat University",
-  "Vastrapur Lake",
-  "Sindhu Bhavan Road",
+  "Cyber Towers, Hitec City",
+  "Madhapur Metro Station",
+  "Jubilee Hills Checkpost",
+  "Road No. 36, Jubilee Hills",
+  "Gachibowli ORR Junction",
+  "Banjara Hills Road No. 1",
+  "Kondapur Signal",
+  "Kukatpally Y Junction",
 ];
 
 function AutocompleteInput({

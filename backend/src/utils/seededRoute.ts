@@ -14,23 +14,23 @@ export interface SeededJunction {
 export const SEEDED_ROUTE: SeededJunction[] = [
   {
     id: "junction-001",
-    name: "Civil Hospital Chowk",
-    location: { lat: 23.0225, lng: 72.5714 },
+    name: "Cyber Towers Junction",
+    location: { lat: 17.4504, lng: 78.3808 },
   },
   {
     id: "junction-002",
-    name: "Nehru Bridge",
-    location: { lat: 23.027, lng: 72.5803 },
+    name: "Madhapur Metro Junction",
+    location: { lat: 17.4435, lng: 78.3942 },
   },
   {
     id: "junction-003",
-    name: "Kalupur Signal",
-    location: { lat: 23.031, lng: 72.5885 },
+    name: "Jubilee Hills Checkpost",
+    location: { lat: 17.4264, lng: 78.4140 },
   },
   {
     id: "junction-004",
-    name: "VS Hospital Gate",
-    location: { lat: 23.0356, lng: 72.5945 },
+    name: "Apollo Hospital Gate",
+    location: { lat: 17.4168, lng: 78.4132 },
   },
 ];
 

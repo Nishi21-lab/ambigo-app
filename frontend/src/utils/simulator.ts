@@ -1,23 +1,23 @@
 import type { Coordinates } from "../types";
 
-// Seeded waypoints mirroring the backend seeded corridor (interpolated)
+// Seeded waypoints mirroring the backend seeded corridor in Hyderabad (interpolated)
 const SEEDED_WAYPOINTS: Coordinates[] = [
-  { lat: 23.0225, lng: 72.5714 },
-  { lat: 23.0234, lng: 72.5730 },
-  { lat: 23.0243, lng: 72.5746 },
-  { lat: 23.0252, lng: 72.5762 },
-  { lat: 23.0261, lng: 72.5778 },
-  { lat: 23.0270, lng: 72.5803 }, // Junction 2
-  { lat: 23.0279, lng: 72.5818 },
-  { lat: 23.0288, lng: 72.5833 },
-  { lat: 23.0297, lng: 72.5848 },
-  { lat: 23.0306, lng: 72.5863 },
-  { lat: 23.0310, lng: 72.5885 }, // Junction 3
-  { lat: 23.0319, lng: 72.5900 },
-  { lat: 23.0328, lng: 72.5912 },
-  { lat: 23.0337, lng: 72.5924 },
-  { lat: 23.0347, lng: 72.5934 },
-  { lat: 23.0356, lng: 72.5945 }, // Junction 4
+  { lat: 17.4504, lng: 78.3808 }, // Junction 1: Cyber Towers
+  { lat: 17.4490, lng: 78.3835 },
+  { lat: 17.4476, lng: 78.3862 },
+  { lat: 17.4462, lng: 78.3888 },
+  { lat: 17.4449, lng: 78.3915 },
+  { lat: 17.4435, lng: 78.3942 }, // Junction 2: Madhapur Metro
+  { lat: 17.4401, lng: 78.3982 },
+  { lat: 17.4367, lng: 78.4021 },
+  { lat: 17.4332, lng: 78.4061 },
+  { lat: 17.4298, lng: 78.4100 },
+  { lat: 17.4264, lng: 78.4140 }, // Junction 3: Jubilee Hills Checkpost
+  { lat: 17.4245, lng: 78.4138 },
+  { lat: 17.4226, lng: 78.4137 },
+  { lat: 17.4206, lng: 78.4135 },
+  { lat: 17.4187, lng: 78.4134 },
+  { lat: 17.4168, lng: 78.4132 }, // Junction 4: Apollo Hospital Gate
 ];
 
 export interface SimulatorState {

@@ -49,8 +49,8 @@ async function runE2ETest() {
     body: JSON.stringify({
       driverName: "Raj Mehta",
       vehicleId: "AMB-UNIT-1",
-      pickup: "Civil Hospital Chowk, Hyderabad",
-      hospital: "VS General Hospital",
+      pickup: "Cyber Towers, Hitec City, Hyderabad",
+      hospital: "Apollo Hospitals, Jubilee Hills",
     }),
   });
 

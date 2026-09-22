@@ -119,8 +119,8 @@ interface OfficerLiveMapProps {
   onSelectJunction?: (junctionId: string) => void;
 }
 
-// Default center: First junction or Hyderabad/Ahmedabad corridor
-const DEFAULT_CENTER: Coordinates = { lat: 23.027, lng: 72.5803 };
+// Default center: First junction or Cyberabad / Hyderabad Emergency Transit Corridor
+const DEFAULT_CENTER: Coordinates = { lat: 17.4350, lng: 78.3980 };
 
 export const OfficerLiveMap: React.FC<OfficerLiveMapProps> = ({
   ambulanceLocation,

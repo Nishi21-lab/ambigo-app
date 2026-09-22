@@ -69,7 +69,7 @@ async function testProductionBackend() {
   // Emit location update from driver
   driverSocket.emit("driver:location_update", {
     tripId,
-    location: { lat: 23.0225, lng: 72.5714 },
+    location: { lat: 17.4504, lng: 78.3808 },
   });
 
   await locationReceived;

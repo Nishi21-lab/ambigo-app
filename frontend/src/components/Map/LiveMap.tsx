@@ -82,7 +82,7 @@ interface LiveMapProps {
   initialCenter?: Coordinates;
 }
 
-const DEFAULT_CENTER: Coordinates = { lat: 23.0225, lng: 72.5714 };
+const DEFAULT_CENTER: Coordinates = { lat: 17.4350, lng: 78.3980 };
 
 export const LiveMap: React.FC<LiveMapProps> = ({
   currentLocation,

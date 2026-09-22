@@ -54,8 +54,8 @@ export function emitAuthorizeJunction(
   getOfficerSocket().emit("driver:location_update", {
     tripId,
     location: {
-      lat: junctionLocation?.lat || 23.0526,
-      lng: junctionLocation?.lng || 72.5888,
+      lat: junctionLocation?.lat || 17.4350,
+      lng: junctionLocation?.lng || 78.3980,
       authorizedJunctionId: junctionId,
       officerId,
       passageAuthorized: true,
