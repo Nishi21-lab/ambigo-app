@@ -71,6 +71,8 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
   const loadingTripIdsRef = useRef<Set<string>>(new Set());
   const activeTripsRef = useRef<Trip[]>(activeTrips);
   activeTripsRef.current = activeTrips;
+  const selectedTripIdRef = useRef<string | null>(selectedTripId);
+  selectedTripIdRef.current = selectedTripId;
 
   // ── Auto-hydrate any trip from backend by ID ─────────────────
   const hydrateTrip = useCallback(async (tripId: string, locationOverride?: Coordinates) => {
@@ -159,23 +161,31 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
     }
   }, [selectedTripId]);
 
+  const hydrateTripRef = useRef(hydrateTrip);
+  hydrateTripRef.current = hydrateTrip;
+  const fetchActiveTripsRef = useRef(fetchActiveTrips);
+  fetchActiveTripsRef.current = fetchActiveTrips;
+
   // Initial load
   useEffect(() => {
     fetchActiveTrips();
   }, [fetchActiveTrips]);
 
   // ── 2. Socket.IO Real-time Synchronization ───────────────────
+  // Join room when active trip selection changes
   useEffect(() => {
-    connectOfficerSocket();
-
-    // If an active trip is selected, join its room
     if (selectedTripId) {
       joinOfficerTrip(selectedTripId);
     }
+  }, [selectedTripId]);
+
+  // Main real-time socket subscription (lifecycle mounted once)
+  useEffect(() => {
+    connectOfficerSocket();
 
     // Polling heartbeat (every 4s) to guarantee new or existing trips are captured
     const pollInterval = setInterval(() => {
-      fetchActiveTrips();
+      fetchActiveTripsRef.current();
     }, 4000);
 
     // 0: Live connection state tracking
@@ -187,7 +197,7 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
     // A: Real-time location update from driver (exact telemetry)
     const unsubLoc = onLocationUpdate(({ tripId, location }) => {
       setLastSyncTime(new Date().toLocaleTimeString());
-      if (!selectedTripId || selectedTripId === tripId) {
+      if (!selectedTripIdRef.current || selectedTripIdRef.current === tripId) {
         setAmbulanceLocation(location);
       }
       let exists = false;
@@ -200,7 +210,7 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
         return prev;
       });
       if (!exists) {
-        hydrateTrip(tripId, location);
+        hydrateTripRef.current(tripId, location);
       }
     });
 
@@ -228,7 +238,7 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
         return prev;
       });
       if (!exists) {
-        hydrateTrip(tripId, junction?.location);
+        hydrateTripRef.current(tripId, junction?.location);
       }
     });
 
@@ -255,7 +265,7 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
         return prev;
       });
       if (!exists) {
-        hydrateTrip(tripId, junction?.location);
+        hydrateTripRef.current(tripId, junction?.location);
       }
     });
 
@@ -279,7 +289,7 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
     const unsubComp = onTripCompleted(({ tripId }) => {
       setLastSyncTime(new Date().toLocaleTimeString());
       setActiveTrips((prev) => prev.filter((t) => t._id !== tripId));
-      if (selectedTripId === tripId) {
+      if (selectedTripIdRef.current === tripId) {
         setSelectedTripId(null);
         setAmbulanceLocation(null);
       }
@@ -313,21 +323,28 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
     // G: Dispatch request taken by driver
     const unsubTaken = onRequestTaken(() => {
       setLastSyncTime(new Date().toLocaleTimeString());
-      setTimeout(fetchActiveTrips, 500);
+      setTimeout(() => fetchActiveTripsRef.current(), 500);
     });
 
     // H: Incoming trip notification
     const unsubIncoming = onTripIncoming(({ tripId, junction }) => {
       setLastSyncTime(new Date().toLocaleTimeString());
-      hydrateTrip(tripId, junction?.location);
+      hydrateTripRef.current(tripId, junction?.location);
     });
 
     // I: Global emergency dispatch alert broadcast
     const unsubReqNew = onRequestNew(async ({ request }) => {
       setLastSyncTime(new Date().toLocaleTimeString());
-      if (request?.incidentLocation?.address?.startsWith("EMERGENCY_DISPATCH:")) {
-        const tripId = request.incidentLocation.address.replace("EMERGENCY_DISPATCH:", "").trim();
-        hydrateTrip(tripId, request.incidentLocation);
+      const addr = request?.incidentLocation?.address || "";
+      let tid = "";
+      if (addr.startsWith("EMERGENCY_DISPATCH:")) {
+        tid = addr.replace("EMERGENCY_DISPATCH:", "").trim();
+      } else {
+        const hex = addr.match(/[0-9a-fA-F]{24}/);
+        if (hex) tid = hex[0];
+      }
+      if (tid) {
+        hydrateTripRef.current(tid, request?.incidentLocation);
       }
     });
 
@@ -343,9 +360,8 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
       unsubNew();
       unsubTaken();
       unsubReqNew();
-      disconnectOfficerSocket();
     };
-  }, [selectedTripId, fetchActiveTrips, hydrateTrip]);
+  }, []);
 
   // ── 3. Officer Actions ───────────────────────────────────────
   const handleAuthorize = async (junctionId: string) => {

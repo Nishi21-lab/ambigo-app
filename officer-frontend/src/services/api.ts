@@ -84,12 +84,16 @@ export const officerAuthApi = {
 
 const TRACKED_TRIPS_KEY = "ambigo_officer_tracked_trip_ids";
 
+export const isValidMongoId = (id: string): boolean =>
+  typeof id === "string" && /^[0-9a-fA-F]{24}$/.test(id.trim());
+
 export function rememberTrackedTripId(tripId: string) {
+  if (!isValidMongoId(tripId)) return;
   try {
     const raw = localStorage.getItem(TRACKED_TRIPS_KEY);
     const set = new Set<string>(raw ? JSON.parse(raw) : []);
-    set.add(tripId);
-    const arr = Array.from(set).slice(-50);
+    set.add(tripId.trim());
+    const arr = Array.from(set).filter(isValidMongoId).slice(-50);
     localStorage.setItem(TRACKED_TRIPS_KEY, JSON.stringify(arr));
   } catch {}
 }
@@ -97,7 +101,8 @@ export function rememberTrackedTripId(tripId: string) {
 export function getTrackedTripIds(): string[] {
   try {
     const raw = localStorage.getItem(TRACKED_TRIPS_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter(isValidMongoId) : [];
   } catch {
     return [];
   }
@@ -107,57 +112,54 @@ export function getTrackedTripIds(): string[] {
 export const officerTripsApi = {
   getAll: async (status?: string): Promise<{ trips: Trip[] }> => {
     try {
-      return await request(status ? `/trips?status=${encodeURIComponent(status)}` : "/trips");
-    } catch {
-      // Production Render backend fallback: hydrate trips from /requests and tracked IDs
-      try {
-        const [acceptedRes, pendingRes, genericRes] = await Promise.all([
-          request<{ requests: any[] }>("/requests?status=accepted").catch(() => ({ requests: [] })),
-          request<{ requests: any[] }>("/requests?status=pending").catch(() => ({ requests: [] })),
-          request<{ requests: any[] }>("/requests").catch(() => ({ requests: [] })),
-        ]);
-        const allRequests = [
-          ...(acceptedRes.requests || []),
-          ...(pendingRes.requests || []),
-          ...(genericRes.requests || []),
-        ];
+      const [acceptedRes, pendingRes, genericRes] = await Promise.all([
+        request<{ requests: any[] }>("/requests?status=accepted").catch(() => ({ requests: [] })),
+        request<{ requests: any[] }>("/requests?status=pending").catch(() => ({ requests: [] })),
+        request<{ requests: any[] }>("/requests").catch(() => ({ requests: [] })),
+      ]);
+      const allRequests = [
+        ...(acceptedRes.requests || []),
+        ...(pendingRes.requests || []),
+        ...(genericRes.requests || []),
+      ];
 
-        const reqTripIds = allRequests
-          .filter((r) => r.incidentLocation?.address?.startsWith("EMERGENCY_DISPATCH:"))
-          .map((r) => r.incidentLocation.address.replace("EMERGENCY_DISPATCH:", "").trim());
-
-        const trackedIds = getTrackedTripIds();
-        const allTripIds = [...new Set([...reqTripIds, ...trackedIds])];
-
-        const fetchedTrips: Trip[] = [];
-        for (const tid of allTripIds) {
-          try {
-            const tRes = await request<{ trip: Trip }>(`/trips/${tid}`);
-            if (tRes.trip) {
-              rememberTrackedTripId(tRes.trip._id);
-              if (!status || tRes.trip.status === status) {
-                fetchedTrips.push(tRes.trip);
-              }
-            }
-          } catch {}
+      const reqTripIds: string[] = [];
+      allRequests.forEach((r) => {
+        const addr = r.incidentLocation?.address || "";
+        if (addr.startsWith("EMERGENCY_DISPATCH:")) {
+          const id = addr.replace("EMERGENCY_DISPATCH:", "").trim();
+          if (isValidMongoId(id)) reqTripIds.push(id);
+        } else {
+          const hexMatch = addr.match(/[0-9a-fA-F]{24}/);
+          if (hexMatch && isValidMongoId(hexMatch[0])) {
+            reqTripIds.push(hexMatch[0]);
+          }
         }
-        return { trips: fetchedTrips };
-      } catch {
-        return { trips: [] };
+      });
+
+      const trackedIds = getTrackedTripIds();
+      const allTripIds = [...new Set([...reqTripIds, ...trackedIds])].filter(isValidMongoId);
+
+      const fetchedTrips: Trip[] = [];
+      for (const tid of allTripIds) {
+        try {
+          const tRes = await request<{ trip: Trip }>(`/trips/${tid}`);
+          if (tRes.trip) {
+            rememberTrackedTripId(tRes.trip._id);
+            if (!status || tRes.trip.status === status) {
+              fetchedTrips.push(tRes.trip);
+            }
+          }
+        } catch {}
       }
+      return { trips: fetchedTrips };
+    } catch {
+      return { trips: [] };
     }
   },
 
   getActive: async (): Promise<{ trips: Trip[] }> => {
-    try {
-      const res = await request<{ trips: Trip[] }>("/trips/active");
-      if (res && Array.isArray(res.trips)) {
-        return res;
-      }
-      throw new Error("No trips array in /trips/active response");
-    } catch {
-      return officerTripsApi.getAll("en_route");
-    }
+    return officerTripsApi.getAll("en_route");
   },
 
   getById: (id: string): Promise<{ trip: Trip }> =>
