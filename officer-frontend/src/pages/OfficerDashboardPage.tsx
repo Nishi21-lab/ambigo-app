@@ -74,38 +74,42 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
 
   // ── Auto-hydrate any trip from backend by ID ─────────────────
   const hydrateTrip = useCallback(async (tripId: string, locationOverride?: Coordinates) => {
-    if (!tripId || loadingTripIdsRef.current.has(tripId)) return;
-    loadingTripIdsRef.current.add(tripId);
+    const tid = tripId ? String(tripId).trim() : "";
+    if (!tid || loadingTripIdsRef.current.has(tid)) return;
+    loadingTripIdsRef.current.add(tid);
     try {
-      const res = await officerTripsApi.getById(tripId);
-      if (res.trip && res.trip.status === "en_route") {
-        rememberTrackedTripId(res.trip._id);
+      const res = await officerTripsApi.getById(tid);
+      const tripObj = res?.trip;
+      if (tripObj && (tripObj.status === "en_route" || !tripObj.status)) {
+        const canonicalId = tripObj._id || (tripObj as any).id || tid;
+        rememberTrackedTripId(canonicalId);
         const loc =
           locationOverride ||
-          res.trip.lastKnownLocation ||
-          res.trip.junctions[0]?.location ||
+          tripObj.lastKnownLocation ||
+          tripObj.junctions?.[0]?.location ||
           null;
-        const fullTrip: Trip = { ...res.trip, lastKnownLocation: loc || undefined };
+        const fullTrip: Trip = { ...tripObj, _id: canonicalId, lastKnownLocation: loc || undefined };
 
         setActiveTrips((prev) => {
-          if (prev.some((t) => t._id === tripId)) {
-            return prev.map((t) => (t._id === tripId ? fullTrip : t));
+          const exists = prev.some((t) => (t._id || (t as any).id) === canonicalId);
+          if (exists) {
+            return prev.map((t) => ((t._id || (t as any).id) === canonicalId ? fullTrip : t));
           }
           return [fullTrip, ...prev];
         });
-        setSelectedTripId((cur) => cur || tripId);
+        setSelectedTripId((cur) => cur || canonicalId);
         if (loc) {
           setAmbulanceLocation(loc);
         }
-        joinOfficerTrip(tripId);
+        joinOfficerTrip(canonicalId);
         if (!isAlarmMutedRef.current) {
           playEmergencyAlertSound();
         }
       }
     } catch (err) {
-      console.warn("Could not hydrate trip:", tripId, err);
+      console.warn("Could not hydrate trip:", tid, err);
     } finally {
-      loadingTripIdsRef.current.delete(tripId);
+      loadingTripIdsRef.current.delete(tid);
     }
   }, []);
 
@@ -284,22 +288,26 @@ export const OfficerDashboardPage: React.FC<OfficerDashboardPageProps> = ({
     // F: Real-time NEW emergency incoming
     const unsubNew = onEmergencyNew(({ trip }) => {
       setLastSyncTime(new Date().toLocaleTimeString());
+      if (!trip) return;
+      const tid = trip._id || (trip as any).id;
+      if (!tid) return;
+      rememberTrackedTripId(tid);
+      const normalizedTrip: Trip = { ...trip, _id: tid };
+      setActiveTrips((prev) => {
+        const exists = prev.some((t) => (t._id || (t as any).id) === tid);
+        if (exists) return prev;
+        return [normalizedTrip, ...prev];
+      });
+      setSelectedTripId((cur) => cur || tid);
+      if (normalizedTrip.lastKnownLocation) {
+        setAmbulanceLocation(normalizedTrip.lastKnownLocation);
+      } else if (normalizedTrip.junctions && normalizedTrip.junctions.length > 0) {
+        setAmbulanceLocation(normalizedTrip.junctions[0].location);
+      }
+      joinOfficerTrip(tid);
       if (!isAlarmMutedRef.current) {
         playEmergencyAlertSound();
       }
-      rememberTrackedTripId(trip._id);
-      setActiveTrips((prev) => {
-        const exists = prev.some((t) => t._id === trip._id);
-        if (exists) return prev;
-        return [trip, ...prev];
-      });
-      setSelectedTripId(trip._id);
-      if (trip.lastKnownLocation) {
-        setAmbulanceLocation(trip.lastKnownLocation);
-      } else if (trip.junctions.length > 0) {
-        setAmbulanceLocation(trip.junctions[0].location);
-      }
-      joinOfficerTrip(trip._id);
     });
 
     // G: Dispatch request taken by driver

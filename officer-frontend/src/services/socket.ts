@@ -8,7 +8,20 @@ import type {
   RequestTakenPayload,
 } from "../types";
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "https://ambigo-driver.onrender.com";
+function cleanSocketUrl(rawUrl?: string): string {
+  const fallback = "https://ambigo-driver.onrender.com";
+  if (!rawUrl || typeof rawUrl !== "string") return fallback;
+  const firstLine = rawUrl.split(/[\r\n]+/).map((s) => s.trim()).filter(Boolean)[0];
+  let cleaned = (firstLine || rawUrl).trim().replace(/\/+$/, "");
+  const match = cleaned.match(/https?:\/\/[^\s"'<>\n\r]+/);
+  if (match) {
+    cleaned = match[0].replace(/\/+$/, "");
+  }
+  cleaned = cleaned.replace(/\/api$/, "");
+  return cleaned || fallback;
+}
+
+const SOCKET_URL = cleanSocketUrl(import.meta.env.VITE_SOCKET_URL);
 
 let socket: Socket | null = null;
 
@@ -18,6 +31,10 @@ export function getOfficerSocket(): Socket {
       transports: ["websocket", "polling"],
       autoConnect: false,
     });
+
+    socket.on("connect", () => {
+      socket?.emit("officer:join");
+    });
   }
   return socket;
 }
@@ -26,8 +43,8 @@ export function connectOfficerSocket() {
   const s = getOfficerSocket();
   if (!s.connected) {
     s.connect();
-    s.emit("officer:join");
   }
+  s.emit("officer:join");
 }
 
 export function disconnectOfficerSocket() {

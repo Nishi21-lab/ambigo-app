@@ -5,7 +5,22 @@ import type {
   OfficerAuthResponse,
 } from "../types";
 
-const API_BASE = import.meta.env.VITE_API_URL || "https://ambigo-driver.onrender.com/api";
+function cleanApiBase(rawUrl?: string): string {
+  const fallback = "https://ambigo-driver.onrender.com/api";
+  if (!rawUrl || typeof rawUrl !== "string") return fallback;
+  const firstLine = rawUrl.split(/[\r\n]+/).map((s) => s.trim()).filter(Boolean)[0];
+  let cleaned = (firstLine || rawUrl).trim().replace(/\/+$/, "");
+  const match = cleaned.match(/https?:\/\/[^\s"'<>\n\r]+/);
+  if (match) {
+    cleaned = match[0].replace(/\/+$/, "");
+  }
+  if (!cleaned.endsWith("/api")) {
+    cleaned = `${cleaned}/api`;
+  }
+  return cleaned || fallback;
+}
+
+const API_BASE = cleanApiBase(import.meta.env.VITE_API_URL);
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {
@@ -17,7 +32,12 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE}${path}`, {
+  let cleanPath = path.startsWith("/") ? path : `/${path}`;
+  if (cleanPath.startsWith("/api/")) {
+    cleanPath = cleanPath.replace(/^\/api/, "");
+  }
+
+  const res = await fetch(`${API_BASE}${cleanPath}`, {
     headers,
     ...options,
   });
