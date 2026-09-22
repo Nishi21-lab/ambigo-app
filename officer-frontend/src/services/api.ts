@@ -62,27 +62,59 @@ export const officerAuthApi = {
   },
 };
 
+const TRACKED_TRIPS_KEY = "ambigo_officer_tracked_trip_ids";
+
+export function rememberTrackedTripId(tripId: string) {
+  try {
+    const raw = localStorage.getItem(TRACKED_TRIPS_KEY);
+    const set = new Set<string>(raw ? JSON.parse(raw) : []);
+    set.add(tripId);
+    const arr = Array.from(set).slice(-50);
+    localStorage.setItem(TRACKED_TRIPS_KEY, JSON.stringify(arr));
+  } catch {}
+}
+
+export function getTrackedTripIds(): string[] {
+  try {
+    const raw = localStorage.getItem(TRACKED_TRIPS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
 // ── Officer Trips & Junction API ──────────────────────────────
 export const officerTripsApi = {
   getAll: async (status?: string): Promise<{ trips: Trip[] }> => {
     try {
       return await request(status ? `/trips?status=${encodeURIComponent(status)}` : "/trips");
     } catch {
-      // Production Render backend fallback: hydrate trips from /requests
+      // Production Render backend fallback: hydrate trips from /requests and tracked IDs
       try {
-        const reqRes = await request<{ requests: any[] }>("/requests");
-        const tripIds = [
-          ...new Set(
-            (reqRes.requests || [])
-              .filter((r) => r.incidentLocation?.address?.startsWith("EMERGENCY_DISPATCH:"))
-              .map((r) => r.incidentLocation.address.replace("EMERGENCY_DISPATCH:", "").trim())
-          ),
+        const [acceptedRes, pendingRes, genericRes] = await Promise.all([
+          request<{ requests: any[] }>("/requests?status=accepted").catch(() => ({ requests: [] })),
+          request<{ requests: any[] }>("/requests?status=pending").catch(() => ({ requests: [] })),
+          request<{ requests: any[] }>("/requests").catch(() => ({ requests: [] })),
+        ]);
+        const allRequests = [
+          ...(acceptedRes.requests || []),
+          ...(pendingRes.requests || []),
+          ...(genericRes.requests || []),
         ];
+
+        const reqTripIds = allRequests
+          .filter((r) => r.incidentLocation?.address?.startsWith("EMERGENCY_DISPATCH:"))
+          .map((r) => r.incidentLocation.address.replace("EMERGENCY_DISPATCH:", "").trim());
+
+        const trackedIds = getTrackedTripIds();
+        const allTripIds = [...new Set([...reqTripIds, ...trackedIds])];
+
         const fetchedTrips: Trip[] = [];
-        for (const tid of tripIds) {
+        for (const tid of allTripIds) {
           try {
             const tRes = await request<{ trip: Trip }>(`/trips/${tid}`);
             if (tRes.trip) {
+              rememberTrackedTripId(tRes.trip._id);
               if (!status || tRes.trip.status === status) {
                 fetchedTrips.push(tRes.trip);
               }
@@ -98,7 +130,11 @@ export const officerTripsApi = {
 
   getActive: async (): Promise<{ trips: Trip[] }> => {
     try {
-      return await request("/trips/active");
+      const res = await request<{ trips: Trip[] }>("/trips/active");
+      if (res && Array.isArray(res.trips)) {
+        return res;
+      }
+      throw new Error("No trips array in /trips/active response");
     } catch {
       return officerTripsApi.getAll("en_route");
     }

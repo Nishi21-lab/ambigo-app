@@ -82,6 +82,10 @@ export function useTripState(): UseTripStateReturn {
           setupSocketListeners(rehydrated._id);
           connectSocket();
           joinTrip(rehydrated._id);
+          const initialLoc =
+            rehydrated.lastKnownLocation ||
+            rehydrated.junctions[0]?.location || { lat: 17.4504, lng: 78.3808 };
+          sendLocationUpdate(rehydrated._id, initialLoc);
         } else {
           localStorage.removeItem(ACTIVE_TRIP_KEY);
         }
@@ -210,6 +214,10 @@ export function useTripState(): UseTripStateReturn {
         setupSocketListeners(created._id);
         joinTrip(created._id);
 
+        const initialLoc =
+          created.junctions[0]?.location || { lat: 17.4504, lng: 78.3808 };
+        sendLocationUpdate(created._id, initialLoc);
+
         // Real-time notification to traffic officers via production backend request broadcast
         try {
           await fetch(`${import.meta.env.VITE_API_URL || "https://ambigo-driver.onrender.com/api"}/requests`, {
@@ -219,8 +227,8 @@ export function useTripState(): UseTripStateReturn {
               patientName: `Emergency Transit (${created.vehicleId})`,
               patientPhone: "+91 98765 43210",
               incidentLocation: {
-                lat: created.junctions[0]?.location.lat || 17.4504,
-                lng: created.junctions[0]?.location.lng || 78.3808,
+                lat: initialLoc.lat,
+                lng: initialLoc.lng,
                 address: `EMERGENCY_DISPATCH:${created._id}`,
               },
               hospital: created.hospital,
@@ -251,6 +259,10 @@ export function useTripState(): UseTripStateReturn {
     setupSocketListeners(newTrip._id);
     joinTrip(newTrip._id);
 
+    const initialLoc =
+      newTrip.junctions[0]?.location || { lat: 17.4504, lng: 78.3808 };
+    sendLocationUpdate(newTrip._id, initialLoc);
+
     // Real-time notification to traffic officers via production backend request broadcast
     fetch(`${import.meta.env.VITE_API_URL || "https://ambigo-driver.onrender.com/api"}/requests`, {
       method: "POST",
@@ -259,8 +271,8 @@ export function useTripState(): UseTripStateReturn {
         patientName: `Emergency Transit (${newTrip.vehicleId})`,
         patientPhone: "+91 98765 43210",
         incidentLocation: {
-          lat: newTrip.junctions[0]?.location.lat || 17.4504,
-          lng: newTrip.junctions[0]?.location.lng || 78.3808,
+          lat: initialLoc.lat,
+          lng: initialLoc.lng,
           address: `EMERGENCY_DISPATCH:${newTrip._id}`,
         },
         hospital: newTrip.hospital,
@@ -269,6 +281,19 @@ export function useTripState(): UseTripStateReturn {
     }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Continuous telemetry heartbeat to officers while trip is active ──
+  useEffect(() => {
+    if (phase !== "active" || !tripIdRef.current) return;
+    const tid = tripIdRef.current;
+    const interval = setInterval(() => {
+      const loc =
+        currentLocation ||
+        trip?.junctions[0]?.location || { lat: 17.4504, lng: 78.3808 };
+      sendLocationUpdate(tid, loc);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [phase, trip, currentLocation]);
 
   // ── Send location update ────────────────────────────────────
   const updateLocation = useCallback((location: Coordinates) => {
